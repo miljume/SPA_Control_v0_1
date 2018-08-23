@@ -11,7 +11,6 @@
 #include <WiFiClient.h>
 #include <ESP32WebServer.h>
 
-
 #define idx_on_off 32
 #define idx_man_auto 33
 #define idx_temp  31
@@ -59,29 +58,24 @@ const char DB5 = 18; //O3
 const char DB6 = 19; //BUBBLE
 const char DB7 = 21; //HEATER?
 
-char res[5000] =
+char res[7000] =
 "<!DOCTYPE html>\
 <html>\
 <head>\
 	<meta name='viewport' content='width=device-width, initial-scale=1'>\
 	<link rel='stylesheet' href='http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css' />\
-	<script src='http://code.jquery.com/jquery-1.11.1.min.js'></script>\
+	<script src='http://code.jquery.com/jquery-1.11.3.min.js'></script>\
 	<script src='http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js'></script>\
 <script>\
 $(function() {\
-$('#sliVal').html('Temp: 38');\
+$('#slider').html('Temp: 38');\
 $('#slider').slider({\
     orientation:'vertical',value:38,min: 20,max: 42,step: 1\
 });\
 $('#slider').slider().bind({\
 slidestop: function(e,ui){\
-    $('#sliVal').html('Temp: '+ui.value);\
-    $.get('/temp?val=' + ui.value, function(d, s){\
-    }); \
-$('#button').button().bind({\
-slidestop: function(e,ui){\
-    $('#sliVal').html('Temp: '+ui.value);\
-    $.get('/temp?val=' + ui.value, function(d, s){\
+    $('#slider').html('Temp: '+ui.value);\
+    $.get('/temp?val=' + ui.value, function(d){\
     }); \
 }\
 });\
@@ -92,21 +86,25 @@ slidestop: function(e,ui){\
 	<div data-role='header'>\
 		<h1>MSPA CAMARO</h1>\
 	</div>\
-	<div role='main' class='ui-content'>\
-    <form>\
-	<select name = 'select-native-s' id = 'select-native-s'>\
-	<option value = 'small'>On</option>\
-	<option value = 'medium'>Off</option>\
-	</select>\
-	<label for = 'slider-s'>Temp: </label>\
-	<input type = 'range' name = 'slider-s' id = 'slider-s' value = '38' min = '0' max = '100' data - highlight = 'true'>\
-	<a href='#' class='ui - btn ui - corner - all'>Anchor</a>\
-	<button class = 'ui-btn ui-corner-all'>Button</button>\
-	</select>\
-	</form>\
-	</div>\
-	</body>\
-	</html>";
+<form>\
+<div class = 'ui-field-contain'>\
+<select name = 'select-native-1' id = 'select-native-1'>\
+<option value = '1'>SPA Power OFF</option>\
+<option value = '2'>SPA Power ON</option>\
+</select>\
+<select name = 'select-native-1' id = 'select-native-1'>\
+<option value = '1'>SPA Heater OFF</option>\
+<option value = '2'>SPA Heater ON</option>\
+</select>\
+</div>\
+</form>\
+<label for='slider'>Temp: </label>\
+<input type='range' name='slider' id='slider' value='38' min='20' max='42' data-highlight = 'true'>\
+<input type='submit' name='submit' value='Set Temp'>\
+</select>\
+</div>\
+</body>\
+</html>";
 
 //char res[1200] =
 //"<!DOCTYPE html>\
