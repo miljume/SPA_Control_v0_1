@@ -30,7 +30,7 @@
 #define idx_setpoint 34
 #define idx_bubble 103
 
-#define spa_ctrl_serial 1
+#define spa_ctrl_serial 0
 #define spa_main_serial 1
 
 String power = "off";
