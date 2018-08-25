@@ -44,8 +44,8 @@ String startup_status = "off";
 ESP32WebServer server(80);
 
 /* change it with your ssid-password */
-const char* ssid = "BORKAN1";
-const char* password = "mickeljunggrensnetwork";
+const char* ssid = "secret";
+const char* password = "secret";
 /* this is the IP of PC/raspberry where you installed MQTT Server
 on Wins use "ipconfig"
 on Linux use "ifconfig" to get its IP address */
@@ -401,7 +401,7 @@ void bubble_off() {
 	digitalWrite(DB6, HIGH);
 }
 void set_temp(int set_temp) {
-	int difftemp = (set_temp - temperature); // Negativ difftemp -> minska temp, positiv difftemp -> öka temp
+	int difftemp = (set_temp - temperature); // Negativ difftemp -> minska temp, positiv difftemp -> Ã¶ka temp
 	Serial.println("Tempskillnad: ");
 	Serial.println(abs(difftemp));
 	if (difftemp<0) {
