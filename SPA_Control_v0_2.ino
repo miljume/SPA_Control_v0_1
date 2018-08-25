@@ -11,14 +11,27 @@
 #include <WiFiClient.h>
 #include <ESP32WebServer.h>
 
-#define idx_on_off 32
-#define idx_man_auto 33
-#define idx_temp  31
-#define idx_heater  37
-#define idx_filter  35
-#define idx_ozone  36
-#define idx_setpoint  34
-#define idx_bubble  38
+/* DEVELOPMENT */
+//#define idx_on_off 32
+//#define idx_man_auto 33
+//#define idx_temp  31
+//#define idx_heater  37
+//#define idx_filter  35
+//#define idx_ozone  36
+//#define idx_setpoint  34
+//#define idx_bubble  38
+
+/* STUGAN */
+#define idx_on_off 100
+#define idx_man_auto 106
+#define idx_temp  107
+#define idx_heater 104
+#define idx_ozone 101
+#define idx_setpoint 34
+#define idx_bubble 103
+
+#define spa_ctrl_serial 1
+#define spa_main_serial 1
 
 String power = "off";
 String heater = "off";
@@ -31,7 +44,7 @@ String startup_status = "off";
 ESP32WebServer server(80);
 
 /* change it with your ssid-password */
-const char* ssid = "AKKTUSTAKKI";
+const char* ssid = "BORKAN1";
 const char* password = "mickeljunggrensnetwork";
 /* this is the IP of PC/raspberry where you installed MQTT Server
 on Wins use "ipconfig"
@@ -72,12 +85,15 @@ $('#slider').html('Temp: 38');\
 $('#slider').slider({\
     orientation:'vertical',value:38,min: 20,max: 42,step: 1\
 });\
-$('#slider').slider().bind({\
-slidestop: function(e,ui){\
-    $('#slider').html('Temp: '+ui.value);\
-    $.get('/temp?val=' + ui.value, function(d){\
-    }); \
-}\
+$('#power').change(function () {\
+alert(this.value);\
+});\
+$('#heater').change(function () {\
+alert(this.value);\
+});\
+$('#submit').click(function(){\
+$.get('/temp?val=' + slider.value, function(d){\
+});\
 });\
 });\
 </script>\
@@ -88,19 +104,19 @@ slidestop: function(e,ui){\
 	</div>\
 <form>\
 <div class = 'ui-field-contain'>\
-<select name = 'select-native-1' id = 'select-native-1'>\
-<option value = '1'>SPA Power OFF</option>\
-<option value = '2'>SPA Power ON</option>\
+<select name = 'power' id = 'power'>\
+<option value = '0'>SPA Power OFF</option>\
+<option value = '1'>SPA Power ON</option>\
 </select>\
-<select name = 'select-native-1' id = 'select-native-1'>\
-<option value = '1'>SPA Heater OFF</option>\
-<option value = '2'>SPA Heater ON</option>\
+<select name = 'heater' id = 'heater'>\
+<option value = '0'>SPA Heater OFF</option>\
+<option value = '1'>SPA Heater ON</option>\
 </select>\
 </div>\
 </form>\
 <label for='slider'>Temp: </label>\
 <input type='range' name='slider' id='slider' value='38' min='20' max='42' data-highlight = 'true'>\
-<input type='submit' name='submit' value='Set Temp'>\
+<input type='submit' name='submit' id='submit' value='Set Temp'>\
 </select>\
 </div>\
 </body>\
@@ -279,6 +295,8 @@ void setup() {
 
 	server.on("/", handleRoot);
 	server.on("/temp", handleTemp);
+	server.on("/power", handlePower);
+
 	server.onNotFound(handleNotFound);
 
 	server.begin();
@@ -297,6 +315,18 @@ void handleTemp() {
 	int newTemp = server.arg(0).toInt();
 	Serial.println("Request from SPA CTRL");
 	Serial.println(newTemp);
+	server.send(200, "text/html", "ok");
+}
+void handlePower() {
+	int newPower = server.arg(0).toInt();
+	Serial.println("Request from SPA CTRL");
+	Serial.println(newPower);
+	server.send(200, "text/html", "ok");
+}
+void handleHeater() {
+	int newHeater = server.arg(0).toInt();
+	Serial.println("Request from SPA CTRL");
+	Serial.println(newHeater);
 	server.send(200, "text/html", "ok");
 }
 void mode_manual() {
@@ -551,76 +581,77 @@ void loop() {
 	server.handleClient();
 
 	/* SERIAL RECEIVE FROM SPA KEYBOARD UNIT */
-	if (Ctrl_debug.available()>0) { // there are bytes in the serial buffer to read
-		ctrl_startByte = Ctrl_debug.read(); // read in the next byte
-		if (ctrl_startByte == 0xA5) { //startOfMessage
-			Serial.println("Found start!");
-			ctrl_statusSeq = Ctrl_debug.read();
-			Serial.println(ctrl_statusSeq, HEX);
-			ctrl_statusByte1 = Ctrl_debug.read();
-			Serial.println(ctrl_statusByte1, HEX);
-			ctrl_statusByte2 = Ctrl_debug.read();
-			Serial.println(ctrl_statusByte2, HEX);
+	if (spa_ctrl_serial == 1){
+		if (Ctrl_debug.available()>0) { // there are bytes in the serial buffer to read
+			ctrl_startByte = Ctrl_debug.read(); // read in the next byte
+			if (ctrl_startByte == 0xA5) { //startOfMessage
+				Serial.println("Found start!");
+				ctrl_statusSeq = Ctrl_debug.read();
+				Serial.println(ctrl_statusSeq, HEX);
+				ctrl_statusByte1 = Ctrl_debug.read();
+				Serial.println(ctrl_statusByte1, HEX);
+				ctrl_statusByte2 = Ctrl_debug.read();
+				Serial.println(ctrl_statusByte2, HEX);
 
-			switch (ctrl_statusSeq) {
-			case 1: // SPA ON/OFF
-				if (ctrl_statusByte1 == 0)
-				{
-					Serial.println("SPA Off");
-					power = "off";
+				switch (ctrl_statusSeq) {
+				case 1: // SPA ON/OFF
+					if (ctrl_statusByte1 == 0)
+					{
+						Serial.println("SPA Off");
+						power = "off";
+					}
+					else if (ctrl_statusByte1 == 1)
+					{
+						Serial.println("SPA On");
+						power = "on";
+					}
+					break;
+				case 2: // SEKVENS 2
+					Serial.print("Sekvens 2, Value: ");
+					Serial.println(ctrl_statusByte1, HEX);
+					break;
+				case 3: // HEATER ON/OFF
+					if (ctrl_statusByte1 == 0)
+					{
+						Serial.println("Heater Off");
+						heater = "off";
+					}
+					else if (ctrl_statusByte1 == 1)
+					{
+						Serial.println("Heater On");
+						heater = "on";
+					}
+					break;
+				case 4: // SEKVENS 4
+					Serial.print("Sekvens 4, Value: ");
+					Serial.println(ctrl_statusByte1, HEX);
+					break;
+				case 5: // TEMP
+					Serial.print("Ny Temp ");
+					Serial.println(ctrl_statusByte1, DEC);
+					break;
+				case 10: // SEKVENS 10
+					Serial.print("Sekvens 10, Value: ");
+					Serial.println(ctrl_statusByte1, HEX);
+					break;
+				case 11: // SEKVENS 11
+					Serial.print("Sekvens 11, Value: ");
+					Serial.println(ctrl_statusByte1, HEX);
+					break;
 				}
-				else if (ctrl_statusByte1 == 1)
-				{
-					Serial.println("SPA On");
-					power = "on";
-				}
-				break;
-			case 2: // SEKVENS 2
-				Serial.print("Sekvens 2, Value: ");
-				Serial.println(ctrl_statusByte1, HEX);
-				break;
-			case 3: // HEATER ON/OFF
-				if (ctrl_statusByte1 == 0)
-				{
-					Serial.println("Heater Off");
-					heater = "off";
-				}
-				else if (ctrl_statusByte1 == 1)
-				{
-					Serial.println("Heater On");
-					heater = "on";
-				}
-				break;
-			case 4: // SEKVENS 4
-				Serial.print("Sekvens 4, Value: ");
-				Serial.println(ctrl_statusByte1, HEX);
-				break;
-			case 5: // TEMP
-				Serial.print("Ny Temp ");
-				Serial.println(ctrl_statusByte1, DEC);
-				break;
-			case 10: // SEKVENS 10
-				Serial.print("Sekvens 10, Value: ");
-				Serial.println(ctrl_statusByte1, HEX);
-				break;
-			case 11: // SEKVENS 11
-				Serial.print("Sekvens 11, Value: ");
-				Serial.println(ctrl_statusByte1, HEX);
-				break;
 			}
+			else {}
+		}
+	}
+	/* SERIAL RECEIVE FROM SPA MAIN UNIT */
+	if (spa_main_serial == 1){
+		if (Main_debug.available()>0) { // there are bytes in the serial buffer to read
+			main_startByte = Main_debug.read(); // read in the next byte
+			Serial.print("Main Unit Rx: ");
+			Serial.println(main_startByte, HEX);
 		}
 		else {}
 	}
-
-	/* SERIAL RECEIVE FROM SPA MAIN UNIT */
-
-	if (Main_debug.available()>0) { // there are bytes in the serial buffer to read
-		main_startByte = Main_debug.read(); // read in the next byte
-		Serial.print("Main Unit Rx: ");
-		Serial.println(main_startByte, HEX);
-	}
-	else {}
-
 }
 
 
