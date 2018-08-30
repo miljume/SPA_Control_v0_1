@@ -11,24 +11,28 @@
 #include <WiFiClient.h>
 #include <ESP32WebServer.h>
 
+#include "index.h" 
+
 /* DEVELOPMENT */
-//#define idx_on_off 32
-//#define idx_man_auto 33
-//#define idx_temp  31
-//#define idx_heater  37
-//#define idx_filter  35
-//#define idx_ozone  36
-//#define idx_setpoint  34
-//#define idx_bubble  38
+#define idx_on_off 32
+#define idx_man_auto 33
+#define idx_set_temp  31
+#define idx_act_temp 73
+#define idx_heater  37
+#define idx_filter  35
+#define idx_ozone  36
+#define idx_setpoint  34
+#define idx_bubble  38
 
 /* STUGAN */
-#define idx_on_off 100
-#define idx_man_auto 106
-#define idx_temp  107
-#define idx_heater 104
-#define idx_ozone 101
-#define idx_setpoint 34
-#define idx_bubble 103
+//#define idx_on_off 100
+//#define idx_man_auto 106
+//#define idx_set_temp  107
+//#define idx_act_temp 73
+//#define idx_heater 104
+//#define idx_ozone 101
+//#define idx_setpoint 34
+//#define idx_bubble 103
 
 #define spa_ctrl_serial 0
 #define spa_main_serial 1
@@ -40,11 +44,13 @@ String ozone = "off";
 String last_power = "off";
 String last_heater = "off";
 String startup_status = "off";
+String act_temp = "";
 
 ESP32WebServer server(80);
 
 /* change it with your ssid-password */
-const char* ssid = "BORKAN1";
+//const char* ssid = "BORKAN1";
+const char* ssid = "AKKTUSTAKKI";
 const char* password = "mickeljunggrensnetwork";
 /* this is the IP of PC/raspberry where you installed MQTT Server
 on Wins use "ipconfig"
@@ -53,6 +59,7 @@ const char* mqtt_server = "192.168.0.51";
 
 int temperature = 38;
 int difftemp = 0;
+
 
 /* EEPROM adress */
 //int temp_addr = 0;
@@ -71,56 +78,56 @@ const char DB5 = 18; //O3
 const char DB6 = 19; //BUBBLE
 const char DB7 = 21; //HEATER?
 
-char res[7000] =
-"<!DOCTYPE html>\
-<html>\
-<head>\
-	<meta name='viewport' content='width=device-width, initial-scale=1'>\
-	<link rel='stylesheet' href='http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css' />\
-	<script src='http://code.jquery.com/jquery-1.11.3.min.js'></script>\
-	<script src='http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js'></script>\
-<script>\
-$(function() {\
-$('#slider').html('Temp: 38');\
-$('#slider').slider({\
-    orientation:'vertical',value:38,min: 20,max: 42,step: 1\
-});\
-$('#power').change(function () {\
-alert(this.value);\
-});\
-$('#heater').change(function () {\
-alert(this.value);\
-});\
-$('#submit').click(function(){\
-$.get('/temp?val=' + slider.value, function(d){\
-});\
-});\
-});\
-</script>\
-</head>\
-<body>\
-	<div data-role='header'>\
-		<h1>MSPA CAMARO</h1>\
-	</div>\
-<form>\
-<div class = 'ui-field-contain'>\
-<select name = 'power' id = 'power'>\
-<option value = '0'>SPA Power OFF</option>\
-<option value = '1'>SPA Power ON</option>\
-</select>\
-<select name = 'heater' id = 'heater'>\
-<option value = '0'>SPA Heater OFF</option>\
-<option value = '1'>SPA Heater ON</option>\
-</select>\
-</div>\
-</form>\
-<label for='slider'>Temp: </label>\
-<input type='range' name='slider' id='slider' value='38' min='20' max='42' data-highlight = 'true'>\
-<input type='submit' name='submit' id='submit' value='Set Temp'>\
-</select>\
-</div>\
-</body>\
-</html>";
+//char res[7000] =
+//"<!DOCTYPE html>\
+//<html>\
+//<head>\
+//	<meta name='viewport' content='width=device-width, initial-scale=1'>\
+//	<link rel='stylesheet' href='http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css' />\
+//	<script src='http://code.jquery.com/jquery-1.11.3.min.js'></script>\
+//	<script src='http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js'></script>\
+//<script>\
+//$(function() {\
+//$('#slider').html('Temp: 38');\
+//$('#slider').slider({\
+//    orientation:'vertical',value:38,min: 20,max: 42,step: 1\
+//});\
+//$('#power').change(function () {\
+//alert(this.value);\
+//});\
+//$('#heater').change(function () {\
+//alert(this.value);\
+//});\
+//$('#submit').click(function(){\
+//$.get('/temp?val=' + slider.value, function(d){\
+//});\
+//});\
+//});\
+//</script>\
+//</head>\
+//<body>\
+//	<div data-role='header'>\
+//		<h1>MSPA CAMARO</h1>\
+//	</div>\
+//<form>\
+//<div class = 'ui-field-contain'>\
+//<select name = 'power' id = 'power'>\
+//<option value = '0'>SPA Power OFF</option>\
+//<option value = '1'>SPA Power ON</option>\
+//</select>\
+//<select name = 'heater' id = 'heater'>\
+//<option value = '0'>SPA Heater OFF</option>\
+//<option value = '1'>SPA Heater ON</option>\
+//</select>\
+//</div>\
+//</form>\
+//<label for='slider'>Temp: </label>\
+//<input type='range' name='slider' id='slider' value='38' min='20' max='42' data-highlight = 'true'>\
+//<input type='submit' name='submit' id='submit' value='Set Temp'>\
+//</select>\
+//</div>\
+//</body>\
+//</html>";
 
 //char res[1200] =
 //"<!DOCTYPE html>\
@@ -221,10 +228,6 @@ void receivedCallback(char* topic, byte* payload, unsigned int length) {
 
 }
 
-void handleRoot() {
-	server.send(200, "text/html", res);
-}
-
 void handleNotFound() {
 	String message = "File Not Found\n\n";
 	server.send(404, "text/plain", message);
@@ -294,12 +297,16 @@ void setup() {
 	}
 
 	server.on("/", handleRoot);
-	server.on("/temp", handleTemp);
-	server.on("/power", handlePower);
+	server.on("/status.json", updateStatus);
+	server.on("/setTemp", handleTemp);
+	server.on("/setPower", handlePower);
+	server.on("/setHeater", handleHeater);
 
 	server.onNotFound(handleNotFound);
 
 	server.begin();
+	Serial.println("HTTP server started");
+
 	/* configure the MQTT server with IPaddress and port */
 	mqtt_client.setServer(mqtt_server, 1883);
 	/* this receivedCallback function will be invoked when client received subscribed topic */
@@ -311,24 +318,61 @@ void setup() {
 	}
 }
 
+String createJsonResponse() {
+	StaticJsonBuffer<500> jsonBuffer;
+
+	JsonObject &root = jsonBuffer.createObject();
+	JsonArray &typeValue = root.createNestedArray("type");
+	typeValue.add("success");
+	JsonArray &codeValue = root.createNestedArray("code");
+	codeValue.add(200);
+	JsonArray &powerValue = root.createNestedArray("power");
+	powerValue.add(power);
+	JsonArray &heaterValue = root.createNestedArray("heater");
+	heaterValue.add(heater);
+	JsonArray &tempValue= root.createNestedArray("temp");
+	tempValue.add(act_temp);
+
+	String json;
+	root.prettyPrintTo(json);
+	return json;
+}
+
+void handleRoot() {
+	String s = MAIN_page; //Read HTML contents
+	server.send(200, "text/html", s); //Send web page
+}
+
+void updateStatus() {
+	act_temp = "32";
+	String json = "{\"p\":\"" + String(power) + "\",";
+	json += "\"h\":\"" + String(heater) + "\",";
+	json += "\"t\":\"" + String(act_temp) + "\"}";
+	server.send(200, "application/json", json);
+	Serial.println("Status Update Sent");
+}
+
 void handleTemp() {
 	int newTemp = server.arg(0).toInt();
-	Serial.println("Request from SPA CTRL");
+	Serial.print("Request from SPA CTRL");
 	Serial.println(newTemp);
 	server.send(200, "text/html", "ok");
 }
+
 void handlePower() {
 	int newPower = server.arg(0).toInt();
 	Serial.println("Request from SPA CTRL");
 	Serial.println(newPower);
 	server.send(200, "text/html", "ok");
 }
+
 void handleHeater() {
 	int newHeater = server.arg(0).toInt();
 	Serial.println("Request from SPA CTRL");
 	Serial.println(newHeater);
 	server.send(200, "text/html", "ok");
 }
+
 void mode_manual() {
 	pinMode(DB0, INPUT);
 	pinMode(DB1, INPUT);
@@ -400,6 +444,7 @@ void bubble_off() {
 	delay(2000);
 	digitalWrite(DB6, HIGH);
 }
+
 void set_temp(int set_temp) {
 	int difftemp = (set_temp - temperature); // Negativ difftemp -> minska temp, positiv difftemp -> öka temp
 	Serial.println("Tempskillnad: ");
@@ -452,7 +497,7 @@ void start_sequence() {
 	delay(500);
 	update_switch(idx_bubble, 0); // Set bubble to OFF in Domoticz
 	delay(500);
-	update_selector(idx_temp, 20); // Set start temp 38 degrees in Domoticz
+	update_selector(idx_set_temp, 20); // Set start temp 38 degrees in Domoticz
 	delay(500);
 	//heater_on_off(); //Switch heater ON
 	//delay(500);
