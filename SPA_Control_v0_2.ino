@@ -360,10 +360,10 @@ void handleTemp() {
 }
 
 void handlePower() {
-	int newPower = server.arg(0).toInt();
-	Serial.println("Request from SPA CTRL");
-	Serial.println(newPower);
-	server.send(200, "text/html", "ok");
+	String powerState = "OFF";
+	String t_state = server.arg("PowerState");
+	Serial.println(t_state);
+	server.send(200, "text/plane", powerState);
 }
 
 void handleHeater() {
