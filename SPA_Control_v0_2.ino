@@ -44,7 +44,7 @@ String ozone = "off";
 String last_power = "off";
 String last_heater = "off";
 String startup_status = "off";
-String act_temp = "";
+String act_temp = "38";
 
 ESP32WebServer server(80);
 
@@ -77,87 +77,6 @@ const char DB4 = 33; //FILTER
 const char DB5 = 18; //O3
 const char DB6 = 19; //BUBBLE
 const char DB7 = 21; //HEATER?
-
-//char res[7000] =
-//"<!DOCTYPE html>\
-//<html>\
-//<head>\
-//	<meta name='viewport' content='width=device-width, initial-scale=1'>\
-//	<link rel='stylesheet' href='http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css' />\
-//	<script src='http://code.jquery.com/jquery-1.11.3.min.js'></script>\
-//	<script src='http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js'></script>\
-//<script>\
-//$(function() {\
-//$('#slider').html('Temp: 38');\
-//$('#slider').slider({\
-//    orientation:'vertical',value:38,min: 20,max: 42,step: 1\
-//});\
-//$('#power').change(function () {\
-//alert(this.value);\
-//});\
-//$('#heater').change(function () {\
-//alert(this.value);\
-//});\
-//$('#submit').click(function(){\
-//$.get('/temp?val=' + slider.value, function(d){\
-//});\
-//});\
-//});\
-//</script>\
-//</head>\
-//<body>\
-//	<div data-role='header'>\
-//		<h1>MSPA CAMARO</h1>\
-//	</div>\
-//<form>\
-//<div class = 'ui-field-contain'>\
-//<select name = 'power' id = 'power'>\
-//<option value = '0'>SPA Power OFF</option>\
-//<option value = '1'>SPA Power ON</option>\
-//</select>\
-//<select name = 'heater' id = 'heater'>\
-//<option value = '0'>SPA Heater OFF</option>\
-//<option value = '1'>SPA Heater ON</option>\
-//</select>\
-//</div>\
-//</form>\
-//<label for='slider'>Temp: </label>\
-//<input type='range' name='slider' id='slider' value='38' min='20' max='42' data-highlight = 'true'>\
-//<input type='submit' name='submit' id='submit' value='Set Temp'>\
-//</select>\
-//</div>\
-//</body>\
-//</html>";
-
-//char res[1200] =
-//"<!DOCTYPE html>\
-//<html>\
-//<head>\
-//<meta charset='utf-8' name='viewport' content='width=device-width, initial-scale=1'>\
-//<style>\
-//.html{ font - family: Helvetica; display: inline - block; margin: 0px auto; text - align: center; }\
-//.button{ background - color: #4CAF50; border: none; color: white; padding: 16px 40px;\
-//text - decoration: none; font - size: 30px; margin: 2px; cursor: pointer; }\
-//.button2{ background - color: #555555; }\
-//</style>\
-//<H1>MSpa Camaro</H1>\
-//<link href='https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css' rel='stylesheet'>\
-//<script src='https://code.jquery.com/jquery-1.10.2.js'></script>\
-//<script src='https://code.jquery.com/ui/1.10.4/jquery-ui.js'></script>\
-//<script>\
-//$( function() {\
-//$('.widget input[type=submit], .widget a, .widget button').button();\
-//$('button, input, a').click(function(event) {\
-//event.preventDefault();\
-//}\
-//});\
-//});\
-//</script>\
-//</head>\
-//<body>\
-//<input class='ui - button ui - widget ui - corner - all' type='submit' value='SPA On'>\
-//</body>\
-//</html>";
 
 /* topics */
 #define DOMOTICZ_OUT    "domoticz/out"
@@ -344,43 +263,49 @@ void handleRoot() {
 }
 
 void updateStatus() {
-	act_temp = "32";
 	String json = "{\"p\":\"" + String(power) + "\",";
 	json += "\"h\":\"" + String(heater) + "\",";
-	json += "\"t\":\"" + String(act_temp) + "\"}";
+	json += "\"at\":\"" + String(act_temp) + "\",";
+	json += "\"st\":\"" + String(temperature) + "\"}";
 	server.send(200, "application/json", json);
 	Serial.println("Status Update Sent");
 }
 
 void handleTemp() {
 	String temp = server.arg("Temperature");
-	Serial.print("Request from SPA CTRL");
-	Serial.println(temp);
+	int new_temp = temp.toInt();
+	Serial.print("New Temp Received ");
+	Serial.println(new_temp);
+	set_temp(new_temp);
 	server.send(200, "text/html", "Temperature");
 }
 
 void handlePower() {
 	String t_state = server.arg("PowerState");
-	if (t_state == "1")
+	if (t_state == "1" && power == "off")
 	{
-
+		spa_on_off();
+		power = "on";
 	}
 	else
 	{
-
+		spa_on_off();
+		power = "off";
 	}
 	server.send(200, "text/plane", "PowerState");
 }
 
 void handleHeater() {
 	String h_state = server.arg("HeaterState");
-	if (h_state == "1")
+	if (h_state == "1" && heater == "off")
 	{
-
+		heater_on_off();
+		heater = "on";
 	}
 	else
 	{
-
+		heater_on_off();
+		heater = "off";
 	}
 	server.send(200, "text/plane", "HeaterState");
 }
