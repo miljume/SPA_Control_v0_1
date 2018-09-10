@@ -353,24 +353,36 @@ void updateStatus() {
 }
 
 void handleTemp() {
-	int newTemp = server.arg(0).toInt();
+	String temp = server.arg("Temperature");
 	Serial.print("Request from SPA CTRL");
-	Serial.println(newTemp);
-	server.send(200, "text/html", "ok");
+	Serial.println(temp);
+	server.send(200, "text/html", "Temperature");
 }
 
 void handlePower() {
-	String powerState = "OFF";
 	String t_state = server.arg("PowerState");
-	Serial.println(t_state);
-	server.send(200, "text/plane", powerState);
+	if (t_state == "1")
+	{
+
+	}
+	else
+	{
+
+	}
+	server.send(200, "text/plane", "PowerState");
 }
 
 void handleHeater() {
-	int newHeater = server.arg(0).toInt();
-	Serial.println("Request from SPA CTRL");
-	Serial.println(newHeater);
-	server.send(200, "text/html", "ok");
+	String h_state = server.arg("HeaterState");
+	if (h_state == "1")
+	{
+
+	}
+	else
+	{
+
+	}
+	server.send(200, "text/plane", "HeaterState");
 }
 
 void mode_manual() {
