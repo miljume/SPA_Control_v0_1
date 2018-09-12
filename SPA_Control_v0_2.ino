@@ -44,7 +44,6 @@ String ozone = "off";
 String last_power = "off";
 String last_heater = "off";
 String startup_status = "off";
-String act_temp = "38";
 
 ESP32WebServer server(80);
 
@@ -58,6 +57,7 @@ on Linux use "ifconfig" to get its IP address */
 const char* mqtt_server = "192.168.0.51";
 
 int temperature = 38;
+int act_temp = 0;
 int difftemp = 0;
 
 
@@ -84,8 +84,8 @@ const char DB7 = 21; //HEATER?
 
 #define EEPROM_SIZE 64
 
-byte ctrl_startByte, ctrl_statusByte1, ctrl_statusByte2, ctrl_statusSeq;
-byte main_startByte, main_statusByte1, main_statusByte2, main_statusSeq;
+byte ctrl_startByte, ctrl_statusByte1, ctrl_statusSeq;
+byte main_startByte, main_statusByte1, main_statusSeq;
 
 /* Debug Serial*/
 HardwareSerial Main_debug(1); //GPIO 2 TxD, GPIO 4 RxD
@@ -460,6 +460,27 @@ void update_switch(int idx, int nvalue)
 	}
 }
 
+void update_temp(int idx, int nvalue, int svalue)
+{
+	StaticJsonBuffer<300> JSONbuffer;
+	JsonObject& JSONencoder = JSONbuffer.createObject();
+	JSONencoder["command"] = "udevice";
+	JSONencoder["idx"] = idx;
+	JSONencoder["nvalue"] = nvalue;
+	JSONencoder["svalue"] = svalue;
+	char JSONmessageBuffer[100];
+	JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+	Serial.println("Sending message to MQTT topic..");
+	Serial.println(JSONmessageBuffer);
+
+	if (mqtt_client.publish(DOMOTICZ_IN, JSONmessageBuffer) == true) {
+		Serial.println("Success sending message");
+	}
+	else {
+		Serial.println("Error sending message");
+	}
+}
+
 void update_log(char message[50])
 {
 	StaticJsonBuffer<300> JSONbuffer;
@@ -567,13 +588,11 @@ void loop() {
 		if (Ctrl_debug.available()>0) { // there are bytes in the serial buffer to read
 			ctrl_startByte = Ctrl_debug.read(); // read in the next byte
 			if (ctrl_startByte == 0xA5) { //startOfMessage
-				Serial.println("Found start!");
+				Serial.println("*** RECEIVED FROM CTRL ***");
 				ctrl_statusSeq = Ctrl_debug.read();
 				Serial.println(ctrl_statusSeq, HEX);
 				ctrl_statusByte1 = Ctrl_debug.read();
 				Serial.println(ctrl_statusByte1, HEX);
-				ctrl_statusByte2 = Ctrl_debug.read();
-				Serial.println(ctrl_statusByte2, HEX);
 
 				switch (ctrl_statusSeq) {
 				case 1: // SPA ON/OFF
@@ -629,14 +648,51 @@ void loop() {
 	if (spa_main_serial == 1){
 		if (Main_debug.available()>0) { // there are bytes in the serial buffer to read
 			main_startByte = Main_debug.read(); // read in the next byte
-			Serial.print("Main Unit Rx: ");
-			Serial.println(main_startByte, HEX);
-		}
-		else {}
+			if (main_startByte == 0xA5) { //startOfMessage
+				Serial.println("*** RECEIVED FROM MAIN ***");
+				main_startByte = Main_debug.read();
+				Serial.println(main_statusSeq, HEX);
+				main_statusByte1 = Main_debug.read();
+				Serial.println(main_statusByte1, HEX);
+
+				switch (main_statusSeq) {
+				case 6: // ACTUAL TEMP
+					Serial.print("Actual Temp: ");
+					Serial.println(main_statusByte1, DEC);
+					act_temp = (int) main_statusByte1;
+					update_temp(idx_act_temp, 0, act_temp);
+					break;
+				case 7: // SEKVENS 7
+					Serial.print("Sekvens 7, Value: ");
+					Serial.println(main_statusByte1, HEX);
+					break;
+				case 8: // SEKVENS 8
+					Serial.print("Sekvens 8, Value: ");
+					Serial.println(main_statusByte1, HEX);
+					break;
+				case 9: // SEKVENS 9
+					Serial.print("Sekvens 9, Value: ");
+					Serial.println(main_statusByte1, HEX);
+					break;
+				case 12: // SEKVENS 12
+					Serial.print("Sekvens 12, Value: ");
+					Serial.println(main_statusByte1, DEC);
+					break;
+				case 13: // SEKVENS 13
+					Serial.print("Sekvens 13, Value: ");
+					Serial.println(main_statusByte1, HEX);
+					break;
+				case 14: // SEKVENS 14
+					Serial.print("Sekvens 14, Value: ");
+					Serial.println(main_statusByte1, HEX);
+					break;
+				}
+			}
+			else {}
 	}
 }
 
-
+}
 
 
 
